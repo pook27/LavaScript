@@ -14,4 +14,4 @@ program , vars = parse(source)
 
 if __name__ =="__main__":
     cpu = CPU(program)
-    cpu.run(vars, 0.001)
+    cpu.run(vars)

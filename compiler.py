@@ -48,6 +48,73 @@ class Compiler:
             elif op == '-':
                 self.write(f"@{right}")
                 self.write("D=D-A")
+            elif op == '&':
+                self.write(f"@{right}")
+                self.write("D=D&A")
+            elif op == '|':
+                self.write(f"@{right}")
+                self.write("D=D|A")
+            elif op == "*":
+                self.write("@R13")  # store left into counter
+                self.write("M=D")
+                self.write("@0")
+                self.write("D=A")
+                self.write("@R14")  # result = 0
+                self.write("M=D")
+
+                loop = f"MUL_LOOP{next(self.label_count)}"
+                end = f"MUL_END{next(self.label_count)}"
+
+                self.write(f"({loop})")
+                self.write("@R13")  # if counter == 0, end
+                self.write("D=M")
+                self.write(f"@{end}")
+                self.write("D;JEQ")
+                self.write(f"@{right}")  # add right into result
+                self.write("D=A")
+                self.write("@R14")
+                self.write("M=D+M")
+                self.write("@R13")  # counter--
+                self.write("M=M-1")
+                self.write(f"@{loop}")  # jump back
+                self.write("0;JMP")
+                self.write(f"({end})")  # end label
+
+                self.write("@R14")
+                self.write("D=M")  # load result into D
+            elif op == "/":
+                self.write("@R13")  # store dividend (left) into R13
+                self.write("M=D")
+                self.write("@0")
+                self.write("D=A")
+                self.write("@R14")  # quotient = 0
+                self.write("M=D")
+
+                loop = f"DIV_LOOP{next(self.label_count)}"
+                end = f"DIV_END{next(self.label_count)}"
+
+                self.write(f"({loop})")
+                self.write("@R13")  # D = dividend
+                self.write("D=M")
+                self.write(f"@{right}")  # D = dividend - divisor
+                self.write("D=D-A")
+
+                self.write(f"@{end}")  # if dividend < divisor, end
+                self.write("D;JLT")
+
+                self.write("@R13")  # dividend = dividend - divisor
+                self.write("M=D")
+
+                self.write("@R14")  # quotient++
+                self.write("M=M+1")
+
+                self.write(f"@{loop}")  # repeat
+                self.write("0;JMP")
+
+                self.write(f"({end})")  # end label
+                self.write("@R14")  # load quotient
+                self.write("D=M")
+
             else:
                 raise NotImplementedError(f"{op} with int not implemented")
         else:
@@ -57,6 +124,73 @@ class Compiler:
                 self.write("D=D+M")
             elif op == '-':
                 self.write("D=D-M")
+            elif op == '&':
+                self.write("D=D&M")
+            elif op == '|':
+                self.write("D=D|M")
+            elif op == "*":
+                self.write("@R13")  # store left into counter
+                self.write("M=D")
+                self.write("@0")
+                self.write("D=A")
+                self.write("@R14")  # result = 0
+                self.write("M=D")
+
+                loop = f"MUL_LOOP{next(self.label_count)}"
+                end = f"MUL_END{next(self.label_count)}"
+
+                self.write(f"({loop})")
+                self.write("@R13")  # if counter == 0, end
+                self.write("D=M")
+                self.write(f"@{end}")
+                self.write("D;JEQ")
+
+                self.write(f"@{right}")  # add right into result
+                self.write("D=M")
+                self.write("@R14")
+                self.write("M=D+M")
+
+                self.write("@R13")  # counter--
+                self.write("M=M-1")
+
+                self.write(f"@{loop}")  # jump back
+                self.write("0;JMP")
+
+                self.write(f"({end})")  # end label
+                self.write("@R14")
+                self.write("D=M")  # load result into D
+            elif op == '/':
+                self.write("@R13")  # store dividend (left) into R13
+                self.write("M=D")
+                self.write("@0")
+                self.write("D=A")
+                self.write("@R14")  # quotient = 0
+                self.write("M=D")
+
+                loop = f"DIV_LOOP{next(self.label_count)}"
+                end = f"DIV_END{next(self.label_count)}"
+
+                self.write(f"({loop})")
+                self.write("@R13")  # D = dividend
+                self.write("D=M")
+                self.write(f"@{right}")  # D = dividend - divisor
+                self.write("D=D-M")
+
+                self.write(f"@{end}")  # if dividend < divisor, end
+                self.write("D;JLT")
+
+                self.write("@R13")  # dividend = dividend - divisor
+                self.write("M=D")
+
+                self.write("@R14")  # quotient++
+                self.write("M=M+1")
+
+                self.write(f"@{loop}")  # repeat
+                self.write("0;JMP")
+
+                self.write(f"({end})")  # end label
+                self.write("@R14")  # load quotient
+                self.write("D=M")
             else:
                 raise NotImplementedError(f"{op} with var not implemented")
 

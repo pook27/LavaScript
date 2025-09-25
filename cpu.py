@@ -95,6 +95,8 @@ class CPU:
                 print("\n")
                 time.sleep(time_delay)
             self.step()
+        output = ""
         for key, value in vars.items():
-            print(f"{key} : {int(self.ram[value], 2)}")
-        print("DONE")
+            output+= f"{key} : {int(self.ram[value], 2)}\n"
+        print(output)
+        #print("DONE")

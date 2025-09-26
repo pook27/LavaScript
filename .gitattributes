@@ -1,1 +1,1 @@
-src/legacy/*.ls linguist-language=LavaScript
+*.ls linguist-detectable=false

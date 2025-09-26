@@ -47,33 +47,17 @@ class Compiler:
             right = self.get_var_addr(right)
             not_int = True
         if op == '+':
-            if not_int:
-                self.write(f"@{right}")
-                self.write("D=D+M")
-            else:
-                self.write(f"@{right}")
-                self.write("D=D+A")
+            self.write(f"@{right}")
+            self.write("D=D+M" if not_int else "D=D+A")
         elif op == '-':
-            if not_int:
-                self.write(f"@{right}")
-                self.write("D=D-M")
-            else:
-                self.write(f"@{right}")
-                self.write("D=D-A")
+            self.write(f"@{right}")
+            self.write("D=D-M" if not_int else "D=D-A")
         elif op == '&':
-            if not_int:
-                self.write(f"@{right}")
-                self.write("D=D&M")
-            else:
-                self.write(f"@{right}")
-                self.write("D=D&A")
+            self.write(f"@{right}")
+            self.write("D=D&M" if not_int else "D=D&A")
         elif op == '|':
-            if not_int:
-                self.write(f"@{right}")
-                self.write("D=D|M")
-            else:
-                self.write(f"@{right}")
-                self.write("D=D|A")
+            self.write(f"@{right}")
+            self.write("D=D|M" if not_int else "D=D|A")
         elif op == "*":
             self.write("@R13")  # store left into counter
             self.write("M=D")

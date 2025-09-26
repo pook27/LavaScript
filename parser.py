@@ -37,6 +37,12 @@ def parse_lines(lines, compiler):
 
             compiler.compile_while(condition_str, body)
 
+        elif line.startswith("print"):
+            _, var = line.split()
+            if line.startswith("printc"):
+                compiler.compile_print(var, mode="PRINT_CHAR")
+            else:
+                compiler.compile_print(var, mode="PRINT")
         i += 1
 
 def parse_assignment(var, expr, compiler):

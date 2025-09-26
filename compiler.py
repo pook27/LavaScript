@@ -241,8 +241,19 @@ class Compiler:
         self.write("0;JMP")
         self.write(f"({end_label})")
 
+    def compile_print(self, value, mode="PRINT"):
+        if isinstance(value, int):
+            self.write(f"@{value}")
+            self.write("D=A")
+        else:
+            addr = self.get_var_addr(value)
+            self.write(f"@{addr}")
+            self.write("D=M")
+        self.write(f"{mode} D")
+
+
     def get_code(self):
         return "\n".join(self.asm)
 
     def compile(self):
-        return assemble(self.get_code()), self.vars_map
+        return assemble(self.get_code())

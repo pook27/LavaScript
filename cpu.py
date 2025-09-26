@@ -31,6 +31,7 @@ class CPU:
             self.pc += 1
             return
 
+        print_bits = instr[1:3]
         a_bit = instr[3]
         comp_bits = instr[4:10]   # six bits: zx,nx,zy,ny,f,no
         dest_bits = instr[10:13]  # A, D, M
@@ -55,8 +56,16 @@ class CPU:
         if write_A:
             self.A = out
 
-        d_unsigned = bin_to_int(self.D)
-        d_signed = signed16(d_unsigned)
+        d_value = bin_to_int(self.D)
+        d_signed = signed16(d_value)
+        if print_bits == "01":
+            print(d_signed)
+        elif print_bits == "10":
+            char_code = d_value & 0xFF
+            if 32 <= char_code <= 126:  # Printable ASCII range
+                print(chr(char_code))
+            else:
+                print(f"[{char_code}]")  # Show non-printable as code
 
         do_jump = False
         if jump_bits == "001" and d_signed > 0:    # JGT
@@ -79,15 +88,8 @@ class CPU:
         else:
             self.pc += 1
 
-    def run(self, vars, time_delay=0):
+    def run(self, time_delay=0):
         while self.pc < len(self.rom):
             if time_delay > 0:
-                for key, value in vars.items():
-                    print(f"{key}={int(self.ram[value],2)}", end=" ")
-                print("\n")
                 time.sleep(time_delay)
             self.step()
-        output = ""
-        for key, value in vars.items():
-            output+= f"{key} : {int(self.ram[value], 2)}\n"
-        print(output)

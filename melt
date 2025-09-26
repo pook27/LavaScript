@@ -11,8 +11,8 @@ with open(input_file) as f:
     else:
         raise ValueError("Input file is not a .ls file")
 
-program , vars = parse(source)
+program= parse(source)
 
 if __name__ =="__main__":
     cpu = CPU(program)
-    cpu.run(vars)
+    cpu.run()

@@ -44,6 +44,7 @@
     
 ## 🚀 Getting Started
 
+clone the repository, and then
 in bash terminal type `./melt example_file.ls` in order to run `example_file.ls`
 
 #Development
@@ -53,9 +54,9 @@ in bash terminal type `./melt example_file.ls` in order to run `example_file.ls`
   Extend CPU behavior → `cpu.py`
 
 #Roadmap
- Functions and subroutines
- Full string and array support
- for loops and if conditionals
- File I/O
+ <p>Functions and subroutines</p>
+ <p>Full string and array support</p>
+ <p>for loops and if conditionals</p>
+ <p>File I/O</p>
 
-#License This project is just for learning and fun. Do whatever you want with it
+#License This project is just for learning and fun. Do whatever you want

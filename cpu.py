@@ -62,10 +62,8 @@ class CPU:
             print(d_signed)
         elif print_bits == "10":
             char_code = d_value & 0xFF
-            if 32 <= char_code <= 126:  # Printable ASCII range
-                print(chr(char_code))
-            else:
-                print(f"[{char_code}]")  # Show non-printable as code
+            print(chr(char_code), end="")
+
 
         do_jump = False
         if jump_bits == "001" and d_signed > 0:    # JGT
@@ -93,3 +91,4 @@ class CPU:
             if time_delay > 0:
                 time.sleep(time_delay)
             self.step()
+        print()

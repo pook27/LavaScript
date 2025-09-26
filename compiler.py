@@ -246,11 +246,14 @@ class Compiler:
             self.write(f"@{value}")
             self.write("D=A")
         else:
-            addr = self.get_var_addr(value)
-            self.write(f"@{addr}")
-            self.write("D=M")
+            if isinstance(value, str) and value.isdigit():
+                self.write(f"@{int(value)}")
+                self.write("D=A")
+            else:
+                addr = self.get_var_addr(value)
+                self.write(f"@{addr}")
+                self.write("D=M")
         self.write(f"{mode} D")
-
 
     def get_code(self):
         return "\n".join(self.asm)

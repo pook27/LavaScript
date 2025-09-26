@@ -17,6 +17,8 @@ def parse_lines(lines, compiler):
         # Assignment
         if re.match(r"^\w+\s*=\s*.+$", line):
             var, expr = [part.strip() for part in line.split("=")]
+            if expr.startswith("'") and expr.endswith("'"):
+                expr = str(ord(expr[1:-1]))
             parse_assignment(var, expr, compiler)
 
         # While loop

@@ -79,14 +79,6 @@ class CPU:
         else:
             self.pc += 1
 
-    def run_old(self, step_delay=0):
-        while self.pc < len(self.rom):
-            D_s = signed16(int(self.D,2))
-            print(f"A={int(self.A,2)} D={D_s} M[A]={int(self.ram[int(self.A,2)],2)}")
-            self.step()
-            time.sleep(step_delay)
-        print("DONE")
-
     def run(self, vars, time_delay=0):
         while self.pc < len(self.rom):
             if time_delay > 0:
@@ -99,4 +91,3 @@ class CPU:
         for key, value in vars.items():
             output+= f"{key} : {int(self.ram[value], 2)}\n"
         print(output)
-        #print("DONE")

@@ -3,7 +3,6 @@ from compiler import Compiler
 
 def parse(source_code):
     compiler = Compiler()
-    # Strip comments and empty lines
     lines = [line.split("//")[0].strip() for line in source_code.split("\n")]
     lines = [line for line in lines if line]
     parse_lines(lines, compiler)
@@ -28,20 +27,33 @@ def parse_lines(lines, compiler):
                 raise SyntaxError(f"Unsupported while syntax: {line}")
 
             condition_str = m.group(1).strip()
-
-            # Extract lines until matching `end`
             body_lines, new_i = extract_block(lines, i)
             i = new_i
-
             # Recursive call for nested block
             def body():
                 parse_lines(body_lines, compiler)
 
             compiler.compile_while(condition_str, body)
 
+        # If conditional
+        elif line.startswith("if"):
+            m = re.match(r"if\s+(.+)\s+then", line)
+            if not m:
+                raise SyntaxError(f"Unsupported if syntax: {line}")
+            condition_str = m.group(1).strip()
+            body_lines, new_i = extract_block(lines, i)
+            i = new_i
+            # Recursive call for nested block
+            def body():
+                parse_lines(body_lines, compiler)
+
+            compiler.compile_if(condition_str, body)
+
         elif line.startswith("print"):
-            _, var = line.split()
+            _, var = line.split(maxsplit = 1)
             if line.startswith("printc"):
+                if var.startswith("'") and var.endswith("'"):
+                    var= str(ord(var[1:-1]))
                 compiler.compile_print(var, mode="PRINT_CHAR")
             else:
                 compiler.compile_print(var, mode="PRINT")
@@ -67,7 +79,7 @@ def extract_block(lines, start_index):
     i = start_index + 1
     while i < len(lines) and depth > 0:
         line = lines[i]
-        if re.match(r"while\s+.*\s+do", line):
+        if re.match(r"while\s+.*\s+do", line) or re.match(r"if\s+.*\s+then", line):
             depth += 1
         elif line == "end":
             depth -= 1

@@ -42,7 +42,6 @@ class Compiler:
             self.write("D=M")
 
         not_int = False
-
         if not isinstance(right,int):
             right = self.get_var_addr(right)
             not_int = True
@@ -133,6 +132,25 @@ class Compiler:
 
         jump_map = {">": "JLE", "<": "JGE", "==": "JNE", "!=": "JEQ", ">=": "JLT", "<=": "JGT"}
         return jump_map[op]
+
+    def compile_if(self, condition_str, func):
+        end_label = f"IF_END{next(self.label_count)}"
+        or_parts = [part.strip() for part in condition_str.split("or")]
+        for or_part in or_parts:
+            and_parts = [p.strip() for p in or_part.split("and")]
+            for condition in and_parts:
+                m = re.match(r"(\w+|\d+)\s*(==|!=|>=|<=|>|<)\s*(\w+|\d+)", condition)
+                if not m:
+                    raise SyntaxError(f"Unsupported condition: {condition}")
+                left, op, right = m.groups()
+                left = int(left) if left.isdigit() else left
+                right = int(right) if right.isdigit() else right
+                jump_instr = self.compile_condition(left, op, right)
+
+                self.write(f"@{end_label}")
+                self.write(f"D;{jump_instr}")
+        func()
+        self.write(f"({end_label})")
 
     def compile_while(self, condition_str, func):
         start_label = f"WHILE_START{next(self.label_count)}"

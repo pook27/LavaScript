@@ -13,7 +13,6 @@
   <img src="https://img.shields.io/badge/license-Do_Whatever_You_Want-green?style=for-the-badge" />
 </p>
 
-
 <p align="center">
   LavaScript translates <code>.ls</code> files into Hack assembly, 
   assembles them into binary, and runs them on a custom CPU emulator 
@@ -22,41 +21,46 @@
 
 <p align="center">
   Inspired by the legendary <a href="https://www.nand2tetris.org/">Nand2Tetris</a> course, 
-  extended with ✨ new features ✨ such as multiplication, division, conditions, loops, 
-  and printing.
+  extended with ✨ new features ✨ such as assignments, conditions, loops, 
+  character printing, and even a quirky <code>Maybe</code> random condition.
 </p>
-
 
 ## ✨ Features
 
 - 📝 Variables with automatic memory allocation  
 - ➕ Arithmetic operators: `+`, `-`, `*`, `/`  
 - 🔀 Logical operators: `&`, `|`  
-- 🔎 Conditionals: `==`, `!=`, `>`, `<`, `>=`, `<=`  
-- 🔁 Control flow: `while` loops with `and`/`or` conditions  
+- 🔎 Comparisons: `==`, `!=`, `>`, `<`, `>=`, `<=`  
+- 🔁 Control flow:  
+  - `while` loops (supports `True`, `False`, and `Maybe` for random branching)  
+  - `if` conditionals  
+  - `for (init; condition; increment)` loops  
+- 🖨️ Printing:  
+  - `print(x)` → print number  
+  - `printc('A')` or `printc(x)` → print ASCII character  
+- 🔡 Character literals automatically converted to ASCII codes  
 - ⚙️ Compiler → Hack assembly  
 - 🛠️ Assembler → machine code  
-- 💻 CPU emulator runs the machine code  
-- 🖨️ Extended C-instruction format, for printing instructions:  
+- 💻 CPU emulator executes the machine code with extended print opcodes:  
   - `01` → print number (decimal)  
   - `10` → print ASCII character  
   - `11` → no print (default, backward compatible)
-    
+
 ## 🚀 Getting Started
 
-clone the repository, and then
-in bash terminal type `./melt example_file.ls` in order to run `example_file.ls`
+Clone the repository, then run:
 
-#Development
-  Add new syntax → `parser.py`
-  Implement new operations → `compiler.py`
-  Update opcode translation → `assembler.py`
-  Extend CPU behavior → `cpu.py`
+```bash
+./melt examples/example.ls
+to compile and execute a LavaScript program.
 
-#Roadmap
- <p>Functions and subroutines</p>
- <p>Full string and array support</p>
- <p>for loops and if conditionals</p>
- <p>File I/O</p>
+Development
+Add new syntax → parser.py
+Implement new operations → compiler.py
+Update opcode translation → assembler.py
+Extend CPU behavior → cpu.py
 
-#License This project is just for learning and fun. Do whatever you want
+Roadmap
+<p>Functions and subroutines</p> <p>Strings and arrays</p> <p>Additional operators (like % and logical not)</p> <p>File I/O</p>
+License
+This project is just for learning and fun. Do whatever you want.

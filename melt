@@ -13,4 +13,4 @@ with open(input_file) as f:
 
 if __name__ =="__main__":
     cpu = CPU(parse(source))
-    cpu.run()
+    cpu.run(diagnostics=True)

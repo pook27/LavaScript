@@ -1,11 +1,22 @@
 import re
+import sys
 from compiler import Compiler
 
 def parse(source_code):
     compiler = Compiler()
     lines = [line.split("//")[0].strip() for line in source_code.split("\n")]
     lines = [line for line in lines if line]
-    parse_lines(lines, compiler)
+    try:
+        parse_lines(lines, compiler)
+    except Exception as e:
+        error_type = type(e).__name__
+        lineno = getattr(e, 'lineno', None)
+        if lineno is not None and 0 <= lineno < len(lines):
+            print(f"{error_type} at line {lineno + 1}: {e}", file=sys.stderr)
+            print(f"    {lines[lineno]}", file=sys.stderr)
+        else:
+            print(f"{error_type}: {e}", file=sys.stderr)
+        sys.exit(1)
     return compiler.compile()
 
 def parse_lines(lines, compiler):

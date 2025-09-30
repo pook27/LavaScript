@@ -1,5 +1,3 @@
-import sys
-import time
 symbols = {
     "SP":0, "LCL":1, "ARG":2, "THIS":3, "THAT":4,
     "R0":0, "R1":1, "R2":2, "R3":3, "R4":4,
@@ -49,7 +47,7 @@ def assemble(asm_code):
             rom_address += 1
 
     #2nd pass: instructions
-    nvar = 16
+    nvar = 1
     output = []
 
     for line in lines:
@@ -78,14 +76,12 @@ def assemble(asm_code):
             else:
                 prnt = "NO_PRINT"
                 expr = line
-
             if "=" in expr:
                 dest, comp_jump = line.split("=")
                 dest = dest.strip()
             else:
                 dest = None
                 comp_jump = expr
-
             if ";" in comp_jump:
                 comp, jump = comp_jump.split(";")
                 comp = comp.strip()

@@ -58,30 +58,90 @@ class Compiler:
             self.write(f"@{right}")
             self.write("D=D|M" if not_int else "D=D|A")
         elif op == "*":
-            self.write("@R13")  # store left into counter
-            self.write("M=D")
-            self.write("@0")
-            self.write("D=A")
-            self.write("@R14")  # result = 0
-            self.write("M=D")
+            # Optimize: use minimum value as counter, Get counter and addend at compile time if both are constants
+            if isinstance(left, int) and isinstance(right, int):
+                counter, addend = (left, right) if left <= right else (right, left)
+            else:
+                # At least one is a variable - need runtime comparison
+                counter, addend = None, None
+            
+            if counter is not None:
+                # Compile-time optimization: we know min/max
+                self.write(f"@{counter}")
+                self.write("D=A")
+                self.write("@R13")
+                self.write("M=D")  # counter
+                self.write("@0")
+                self.write("D=A")
+                self.write("@R14")
+                self.write("M=D")  # result = 0
+            else:
+                # Runtime comparison: find min/max at runtime, D already has left
+                self.write("@R13")
+                self.write("M=D")  # R13 = left
+                self.write(f"@{right}")
+                self.write("D=M" if not_int else "D=A")
+                self.write("@R15")
+                self.write("M=D")  # R15 = right
+                
+                # Compare and swap if needed
+                self.write("@R13")
+                self.write("D=M")
+                self.write("@R15")
+                self.write("D=D-M")  # D = left - right
+                skip_swap = f"MUL_SKIP{next(self.label_count)}"
+                self.write(f"@{skip_swap}")
+                self.write("D;JLE")  # if left <= right, no swap needed
+                
+                # Swap: R13 and R15
+                self.write("@R13")
+                self.write("D=M")
+                self.write("@R14")
+                self.write("M=D")  # temp = R13
+                self.write("@R15")
+                self.write("D=M")
+                self.write("@R13")
+                self.write("M=D")  # R13 = R15
+                self.write("@R14")
+                self.write("D=M")
+                self.write("@R15")
+                self.write("M=D")  # R15 = temp
+                
+                self.write(f"({skip_swap})") # Now R13 = min (counter), R15 = max (addend)
+                self.write("@0")
+                self.write("D=A")
+                self.write("@R14")
+                self.write("M=D")  # result = 0
+            
+            # Main multiplication loop
             loop = f"MUL_LOOP{next(self.label_count)}"
             end = f"MUL_END{next(self.label_count)}"
             self.write(f"({loop})")
-            self.write("@R13")  # if counter == 0, end
+            self.write("@R13")
             self.write("D=M")
             self.write(f"@{end}")
-            self.write("D;JEQ")
-            self.write(f"@{right}")  # add right into result
-            self.write("D=M")
+            self.write("D;JEQ")  # if counter == 0, end
+            
+            # Add addend to result
+            if counter is not None:
+                # Compile-time: load constant addend
+                self.write(f"@{addend}")
+                self.write("D=A")
+            else:
+                # Runtime: load from R15
+                self.write("@R15")
+                self.write("D=M")
             self.write("@R14")
             self.write("M=D+M")
-            self.write("@R13")  # counter--
-            self.write("M=M-1")
-            self.write(f"@{loop}")  # jump back
+            
+            self.write("@R13")
+            self.write("M=M-1")  # counter--
+            self.write(f"@{loop}")
             self.write("0;JMP")
-            self.write(f"({end})")  # end label
+            
+            self.write(f"({end})")
             self.write("@R14")
-            self.write("D=M")  # load result into D
+            self.write("D=M")
         elif op == "/":
             self.write("@R13")  # store dividend (left) into R13
             self.write("M=D")
@@ -95,7 +155,7 @@ class Compiler:
             self.write("@R13")  # D = dividend
             self.write("D=M")
             self.write(f"@{right}")  # D = dividend - divisor
-            self.write("D=D-A")
+            self.write("D=D-M" if not_int else "D=D-A")
             self.write(f"@{end}")  # if dividend < divisor, end
             self.write("D;JLT")
             self.write("@R13")  # dividend = dividend - divisor
@@ -134,8 +194,7 @@ class Compiler:
         return jump_map[op]
 
     def compile_for(self, init_str, condition_str, increment_str, func):
-        # Parse and emit initialization
-        # Example: i = 0
+        # Parse and emit initialization, Example: i = 0
         m_init = re.match(r"(\w+)\s*=\s*(.+)", init_str)
         if m_init:
             var, expr = m_init.groups()
@@ -147,7 +206,6 @@ class Compiler:
                 self.compile_assign(var, expr)
         else:
             raise SyntaxError(f"Unsupported for-loop init: {init_str}")
-
         start_label = f"FOR_START{next(self.label_count)}"
         end_label = f"FOR_END{next(self.label_count)}"
         self.write(f"({start_label})")
@@ -163,11 +221,8 @@ class Compiler:
         self.write(f"@{end_label}")
         self.write(f"D;{jump_instr}")
 
-        # Body
-        func()
-
-        # Increment
-        # Example: i = i + 1
+        func() # Body
+        # Increment, Example: i = i + 1
         m_incr = re.match(r"(\w+)\s*=\s*(\w+)\s*([\+\-\*/])\s*(\w+|\d+)", increment_str)
         if m_incr:
             var, left, op, right = m_incr.groups()
@@ -241,8 +296,5 @@ class Compiler:
                 self.write("D=M")
         self.write(f"{mode} D")
 
-    def get_code(self):
-        return "\n".join(self.asm)
-
     def compile(self):
-        return assemble(self.get_code())
+        return assemble("\n".join(self.asm))

@@ -5,7 +5,7 @@ import re
 class Compiler:
     def __init__(self):
         self.vars_map = {}
-        self.next_ram = 16
+        self.next_ram = 1
         self.asm = []
         self.label_count = itertools.count()
 
@@ -33,7 +33,13 @@ class Compiler:
     def compile_math(self, dest, left, op, right):
         dest_addr = self.get_var_addr(dest)
 
-        if isinstance(left,int):
+        # Save original values and types BEFORE any conversion
+        left_is_int = isinstance(left, int)
+        right_is_int = isinstance(right, int)
+        original_left = left
+        original_right = right
+
+        if isinstance(left, int):
             self.write(f"@{left}")
             self.write("D=A")
         else:
@@ -42,9 +48,10 @@ class Compiler:
             self.write("D=M")
 
         not_int = False
-        if not isinstance(right,int):
+        if not isinstance(right, int):
             right = self.get_var_addr(right)
             not_int = True
+
         if op == '+':
             self.write(f"@{right}")
             self.write("D=D+M" if not_int else "D=D+A")
@@ -58,15 +65,10 @@ class Compiler:
             self.write(f"@{right}")
             self.write("D=D|M" if not_int else "D=D|A")
         elif op == "*":
-            # Optimize: use minimum value as counter, Get counter and addend at compile time if both are constants
-            if isinstance(left, int) and isinstance(right, int):
-                counter, addend = (left, right) if left <= right else (right, left)
-            else:
-                # At least one is a variable - need runtime comparison
-                counter, addend = None, None
-            
-            if counter is not None:
-                # Compile-time optimization: we know min/max
+            # Optimize: use minimum value as counter if both are constants
+            if left_is_int and right_is_int:
+                counter, addend = (original_left, original_right) if original_left <= original_right else (
+                    original_right, original_left)
                 self.write(f"@{counter}")
                 self.write("D=A")
                 self.write("@R13")
@@ -76,15 +78,16 @@ class Compiler:
                 self.write("@R14")
                 self.write("M=D")  # result = 0
             else:
-                # Runtime comparison: find min/max at runtime, D already has left
+                # At least one is a variable - need runtime comparison
+                # D already has left value loaded
                 self.write("@R13")
                 self.write("M=D")  # R13 = left
                 self.write(f"@{right}")
                 self.write("D=M" if not_int else "D=A")
                 self.write("@R15")
                 self.write("M=D")  # R15 = right
-                
-                # Compare and swap if needed
+
+                # Compare and swap if needed to minimize loop iterations
                 self.write("@R13")
                 self.write("D=M")
                 self.write("@R15")
@@ -92,7 +95,7 @@ class Compiler:
                 skip_swap = f"MUL_SKIP{next(self.label_count)}"
                 self.write(f"@{skip_swap}")
                 self.write("D;JLE")  # if left <= right, no swap needed
-                
+
                 # Swap: R13 and R15
                 self.write("@R13")
                 self.write("D=M")
@@ -106,13 +109,13 @@ class Compiler:
                 self.write("D=M")
                 self.write("@R15")
                 self.write("M=D")  # R15 = temp
-                
-                self.write(f"({skip_swap})") # Now R13 = min (counter), R15 = max (addend)
+
+                self.write(f"({skip_swap})")  # Now R13 = min (counter), R15 = max (addend)
                 self.write("@0")
                 self.write("D=A")
                 self.write("@R14")
                 self.write("M=D")  # result = 0
-            
+
             # Main multiplication loop
             loop = f"MUL_LOOP{next(self.label_count)}"
             end = f"MUL_END{next(self.label_count)}"
@@ -121,9 +124,9 @@ class Compiler:
             self.write("D=M")
             self.write(f"@{end}")
             self.write("D;JEQ")  # if counter == 0, end
-            
+
             # Add addend to result
-            if counter is not None:
+            if left_is_int and right_is_int:
                 # Compile-time: load constant addend
                 self.write(f"@{addend}")
                 self.write("D=A")
@@ -133,12 +136,12 @@ class Compiler:
                 self.write("D=M")
             self.write("@R14")
             self.write("M=D+M")
-            
+
             self.write("@R13")
             self.write("M=M-1")  # counter--
             self.write(f"@{loop}")
             self.write("0;JMP")
-            
+
             self.write(f"({end})")
             self.write("@R14")
             self.write("D=M")
@@ -168,7 +171,7 @@ class Compiler:
             self.write("@R14")  # load quotient
             self.write("D=M")
         else:
-            raise NotImplementedError(f"{op} with int not implemented")
+            raise NotImplementedError(f"{op} not implemented")
 
         self.write(f"@{dest_addr}")
         self.write("M=D")

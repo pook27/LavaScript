@@ -49,6 +49,20 @@ def parse_lines(lines, compiler):
 
             compiler.compile_if(condition_str, body)
 
+        elif line.startswith("for"):
+        # Syntax: for (init; condition; increment) do
+            m = re.match(r"for\s*\(([^;]+);([^;]+);([^\)]+)\)\s*do", line)
+            if not m:
+                raise SyntaxError(f"Unsupported for-loop syntax: {line}")
+            init_str = m.group(1).strip()
+            condition_str = m.group(2).strip()
+            increment_str = m.group(3).strip()
+            body_lines, new_i = extract_block(lines, i)
+            i = new_i
+            def body():
+                parse_lines(body_lines, compiler)
+            compiler.compile_for(init_str, condition_str, increment_str, body)
+
         elif line.startswith("print"):
             _, var = line.split(maxsplit = 1)
             if line.startswith("printc"):

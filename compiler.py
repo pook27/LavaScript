@@ -133,6 +133,57 @@ class Compiler:
         jump_map = {">": "JLE", "<": "JGE", "==": "JNE", "!=": "JEQ", ">=": "JLT", "<=": "JGT"}
         return jump_map[op]
 
+    def compile_for(self, init_str, condition_str, increment_str, func):
+        # Parse and emit initialization
+        # Example: i = 0
+        m_init = re.match(r"(\w+)\s*=\s*(.+)", init_str)
+        if m_init:
+            var, expr = m_init.groups()
+            var = var.strip()
+            expr = expr.strip()
+            if expr.isdigit():
+                self.compile_assign(var, int(expr))
+            else:
+                self.compile_assign(var, expr)
+        else:
+            raise SyntaxError(f"Unsupported for-loop init: {init_str}")
+
+        start_label = f"FOR_START{next(self.label_count)}"
+        end_label = f"FOR_END{next(self.label_count)}"
+        self.write(f"({start_label})")
+
+        # Condition
+        m_cond = re.match(r"(\w+|\d+)\s*(==|!=|>=|<=|>|<)\s*(\w+|\d+)", condition_str)
+        if not m_cond:
+            raise SyntaxError(f"Unsupported for-loop condition: {condition_str}")
+        left, op, right = m_cond.groups()
+        left = int(left) if left.isdigit() else left
+        right = int(right) if right.isdigit() else right
+        jump_instr = self.compile_condition(left, op, right)
+        self.write(f"@{end_label}")
+        self.write(f"D;{jump_instr}")
+
+        # Body
+        func()
+
+        # Increment
+        # Example: i = i + 1
+        m_incr = re.match(r"(\w+)\s*=\s*(\w+)\s*([\+\-\*/])\s*(\w+|\d+)", increment_str)
+        if m_incr:
+            var, left, op, right = m_incr.groups()
+            var = var.strip()
+            left = left.strip()
+            op = op.strip()
+            right = int(right) if right.isdigit() else right.strip()
+            self.compile_math(var, left, op, right)
+        else:
+            raise SyntaxError(f"Unsupported for-loop increment: {increment_str}")
+
+        # Jump back to start
+        self.write(f"@{start_label}")
+        self.write("0;JMP")
+        self.write(f"({end_label})")
+
     def compile_if(self, condition_str, func):
         end_label = f"IF_END{next(self.label_count)}"
         or_parts = [part.strip() for part in condition_str.split("or")]

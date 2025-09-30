@@ -72,7 +72,7 @@ class Compiler:
             self.write(f"@{end}")
             self.write("D;JEQ")
             self.write(f"@{right}")  # add right into result
-            self.write("D=A")
+            self.write("D=M")
             self.write("@R14")
             self.write("M=D+M")
             self.write("@R13")  # counter--

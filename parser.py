@@ -22,49 +22,46 @@ def parse_lines(lines, compiler):
 
         # While loop
         elif line.startswith("while"):
-            m = re.match(r"while\s+(.+)\s+do", line)
+            m = re.match(r"while\s+(.+)\s*\{", line)
             if not m:
                 raise SyntaxError(f"Unsupported while syntax: {line}")
 
             condition_str = m.group(1).strip()
-            body_lines, new_i = extract_block(lines, i)
+            body_lines, new_i = extract_block(lines, i, block_start="{", block_end="}")
             i = new_i
-            # Recursive call for nested block
             def body():
                 parse_lines(body_lines, compiler)
-
             compiler.compile_while(condition_str, body)
 
         # If conditional
         elif line.startswith("if"):
-            m = re.match(r"if\s+(.+)\s+then", line)
+            m = re.match(r"if\s+(.+)\s*\{", line)
             if not m:
                 raise SyntaxError(f"Unsupported if syntax: {line}")
             condition_str = m.group(1).strip()
-            body_lines, new_i = extract_block(lines, i)
+            body_lines, new_i = extract_block(lines, i, block_start="{", block_end="}")
             i = new_i
-            # Recursive call for nested block
             def body():
                 parse_lines(body_lines, compiler)
-
             compiler.compile_if(condition_str, body)
 
         elif line.startswith("for"):
-        # Syntax: for (init; condition; increment) do
-            m = re.match(r"for\s*\(([^;]+);([^;]+);([^\)]+)\)\s*do", line)
+            # Syntax: for (init; condition; increment) {
+            m = re.match(r"for\s*\(([^;]+);([^;]+);([^)]+)\)\s*\{", line)
             if not m:
                 raise SyntaxError(f"Unsupported for-loop syntax: {line}")
             init_str = m.group(1).strip()
             condition_str = m.group(2).strip()
             increment_str = m.group(3).strip()
-            body_lines, new_i = extract_block(lines, i)
+            body_lines, new_i = extract_block(lines, i, block_start="{", block_end="}")
             i = new_i
             def body():
                 parse_lines(body_lines, compiler)
             compiler.compile_for(init_str, condition_str, increment_str, body)
 
         elif line.startswith("print"):
-            _, var = line.split(maxsplit = 1)
+            _, var = line.split("(",maxsplit = 1)
+            var = var[:-1].strip()
             if line.startswith("printc"):
                 if var.startswith("'") and var.endswith("'"):
                     var= str(ord(var[1:-1]))
@@ -87,15 +84,15 @@ def parse_assignment(var, expr, compiler):
     else:
         compiler.compile_assign(var, expr)
 
-def extract_block(lines, start_index):
+def extract_block(lines, start_index, block_start="{", block_end="}"):
     body_lines = []
     depth = 1
     i = start_index + 1
     while i < len(lines) and depth > 0:
         line = lines[i]
-        if re.match(r"while\s+.*\s+do", line) or re.match(r"if\s+.*\s+then", line):
+        if line.strip() == block_start:
             depth += 1
-        elif line == "end":
+        elif line.strip() == block_end:
             depth -= 1
             if depth == 0:
                 break

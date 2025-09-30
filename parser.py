@@ -1,28 +1,27 @@
 import re
 import sys
+import traceback
+import random
 from compiler import Compiler
 
-def parse(source_code):
+def parse(source_code, debug=True):
     compiler = Compiler()
     lines = [line.split("//")[0].strip() for line in source_code.split("\n")]
     lines = [line for line in lines if line]
     try:
         parse_lines(lines, compiler)
     except Exception as e:
+        if debug:
+            traceback.print_exc()
         error_type = type(e).__name__
-        lineno = getattr(e, 'lineno', None)
-        if lineno is not None and 0 <= lineno < len(lines):
-            print(f"{error_type} at line {lineno + 1}: {e}", file=sys.stderr)
-            print(f"    {lines[lineno]}", file=sys.stderr)
-        else:
-            print(f"{error_type}: {e}", file=sys.stderr)
+        print(f"{error_type}: {e}", file=sys.stderr)
         sys.exit(1)
     return compiler.compile()
 
 def parse_lines(lines, compiler):
     i = 0
     while i < len(lines):
-        line = lines[i]
+        line = lines[i].strip()
 
         # Assignment
         if re.match(r"^\w+\s*=\s*.+$", line):
@@ -38,6 +37,12 @@ def parse_lines(lines, compiler):
                 raise SyntaxError(f"Unsupported while syntax: {line}")
 
             condition_str = m.group(1).strip()
+            if condition_str == "True":
+                condition_str = "0 == 0"  # Always true
+            if condition_str == "False":
+                condition_str = "0 != 0"  # Always false
+            if condition_str == "Maybe":
+                condition_str =  f"0 !={random.randint(0,1)}"  # Randomly true or false
             body_lines, new_i = extract_block(lines, i, block_start="{", block_end="}")
             i = new_i
             def body():
@@ -56,6 +61,7 @@ def parse_lines(lines, compiler):
                 parse_lines(body_lines, compiler)
             compiler.compile_if(condition_str, body)
 
+        # For loop
         elif line.startswith("for"):
             # Syntax: for (init; condition; increment) {
             m = re.match(r"for\s*\(([^;]+);([^;]+);([^)]+)\)\s*\{", line)

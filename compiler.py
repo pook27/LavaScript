@@ -226,6 +226,17 @@ class Compiler:
 
         func() # Body
         # Increment, Example: i = i + 1
+        other_branch = False
+        if "++" in increment_str:
+            var = increment_str.split("+")[0]
+            var = int(var) if var.isdigit() else var.strip()
+            self.compile_math(var, var, "+", 1)
+            other_branch = True
+        elif "--" in increment_str:
+            var = increment_str.split("-")[0]
+            var = int(var) if var.isdigit() else var.strip()
+            self.compile_math(var, var, "-", 1)
+            other_branch = True
         m_incr = re.match(r"(\w+)\s*=\s*(\w+)\s*([\+\-\*/])\s*(\w+|\d+)", increment_str)
         if m_incr:
             var, left, op, right = m_incr.groups()
@@ -234,7 +245,7 @@ class Compiler:
             op = op.strip()
             right = int(right) if right.isdigit() else right.strip()
             self.compile_math(var, left, op, right)
-        else:
+        if not m_incr and not other_branch:
             raise SyntaxError(f"Unsupported for-loop increment: {increment_str}")
 
         # Jump back to start

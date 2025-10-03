@@ -68,7 +68,7 @@ class CPU:
             d_value = bin_to_int(self.D)
             d_signed = signed64(d_value)
             if print_bits == "01":
-                print(d_signed)
+                print(d_signed, end="")
             elif print_bits == "10":
                 char_code = d_value & 0xFF
                 print(chr(char_code), end="")

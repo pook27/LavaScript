@@ -49,17 +49,37 @@ def parse_lines(lines, compiler):
                 parse_lines(body_lines, compiler)
             compiler.compile_while(condition_str, body)
 
-        # If conditional
+        # If conditional (with optional else)
         elif line.startswith("if"):
             m = re.match(r"if\s+(.+)\s*\{", line)
             if not m:
                 raise SyntaxError(f"Unsupported if syntax: {line}")
             condition_str = m.group(1).strip()
+            if condition_str == "True":
+                condition_str = "0 == 0"  # Always true
+            if condition_str == "False":
+                condition_str = "0 != 0"  # Always false
+            if condition_str == "Maybe":
+                condition_str =  f"0 !={random.randint(0,1)}"  # Randomly true or false
             body_lines, new_i = extract_block(lines, i, block_start="{", block_end="}")
             i = new_i
+            # Check for else block
+            has_else = False
+            else_body_lines = []
+            if i < len(lines):
+                next_line = lines[i].strip()
+                if next_line.startswith("else"):
+                    has_else = True
+                    else_body_lines, new_i = extract_block(lines, i, block_start="{", block_end="}")
+                    i = new_i
             def body():
                 parse_lines(body_lines, compiler)
-            compiler.compile_if(condition_str, body)
+            if has_else:
+                def else_body():
+                    parse_lines(else_body_lines, compiler)
+                compiler.compile_if_else(condition_str, body, else_body)
+            else:
+                compiler.compile_if(condition_str, body)
 
         # For loop
         elif line.startswith("for"):
@@ -79,27 +99,72 @@ def parse_lines(lines, compiler):
         elif line.startswith("print"):
             _, var = line.split("(",maxsplit = 1)
             var = var[:-1].strip()
+            args = var.split(",")
+            var = args[0].strip()
+            special = args[1].strip() if len(args) > 1 else None
             if line.startswith("printc"):
                 if var.startswith("'") and var.endswith("'"):
                     var= str(ord(var[1:-1]))
                 compiler.compile_print(var, mode="PRINT_CHAR")
+            elif line.startswith("println"):
+                if var.startswith('"') and var.endswith('"'):
+                    for chr in var[1:-1]:
+                        compiler.compile_print(ord(chr), mode="PRINT_CHAR")
             else:
                 compiler.compile_print(var, mode="PRINT")
+            if special == "\\n":
+                compiler.compile_print(10, mode="PRINT_CHAR")
         i += 1
 
 def parse_assignment(var, expr, compiler):
     expr = expr.strip()
-    m = re.match(r"^(\w+|\d+)\s*([\+\-\*/])\s*(\w+|\d+)$", expr)
-    if m:
-        left, op, right = m.groups()
-        left = int(left) if left.isdigit() else left
-        right = int(right) if right.isdigit() else right
-        compiler.compile_math(var, left, op, right)
-        return
-    if expr.isdigit():
-        compiler.compile_assign(var, int(expr))
-    else:
-        compiler.compile_assign(var, expr)
+        # Tokenize the expression
+    tokens = re.findall(r"\d+|\w+|[\+\-\*/\(\)]", expr)
+    # Shunting Yard algorithm for precedence
+    precedence = {'+': 1, '-': 1, '%': 1, '*': 2, '/': 2}
+    output = []
+    ops = []
+    for token in tokens:
+        if re.match(r"^\d+$", token) or re.match(r"^\w+$", token):
+            output.append(token)
+        elif token in precedence:
+            while (ops and ops[-1] in precedence and
+                   precedence[ops[-1]] >= precedence[token]):
+                output.append(ops.pop())
+            ops.append(token)
+        elif token == '(': 
+            ops.append(token)
+        elif token == ')':
+            while ops and ops[-1] != '(': 
+                output.append(ops.pop())
+            ops.pop()  # Remove '('
+    while ops:
+        output.append(ops.pop())
+
+    # Evaluate RPN and generate code
+    stack = []
+    temp_id = [0]
+    def get_temp():
+        temp_id[0] += 1
+        return f"__tmp{temp_id[0]}"
+    for token in output:
+        if token in precedence:
+            right = stack.pop()
+            left = stack.pop()
+            tmp = get_temp() if len(stack) > 0 or token != output[-1] else var
+            lval = int(left) if left.isdigit() else left
+            rval = int(right) if right.isdigit() else right
+            compiler.compile_math(tmp, lval, token, rval)
+            stack.append(tmp)
+        else:
+            stack.append(token)
+    # Final assignment if needed
+    if stack and stack[-1] != var:
+        final = stack.pop()
+        if final.isdigit():
+            compiler.compile_assign(var, int(final))
+        else:
+            compiler.compile_assign(var, final)
 
 def extract_block(lines, start_index, block_start="{", block_end="}"):
     body_lines = []
@@ -113,6 +178,7 @@ def extract_block(lines, start_index, block_start="{", block_end="}"):
             depth -= 1
             if depth == 0:
                 break
-        body_lines.append(line)
+        else:
+            body_lines.append(line)
         i += 1
     return body_lines, i

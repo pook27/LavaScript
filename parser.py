@@ -32,17 +32,26 @@ def parse_lines(lines, compiler):
 
         # While loop
         elif line.startswith("while"):
-            m = re.match(r"while\s+(.+)\s*\{", line)
+            m = re.match(r"while\s*\(?(.+?)\)?\s*(\{)?$", line)
             if not m:
                 raise SyntaxError(f"Unsupported while syntax: {line}")
 
             condition_str = m.group(1).strip()
+            if not m.group(2):  # No '{' on same line
+                j = i + 1
+                while j < len(lines) and not lines[j].strip():
+                    j += 1
+                if j >= len(lines) or lines[j].strip() != "{":
+                    raise SyntaxError(f"Expected '{{' after while condition on line {i + 1}")
+                i = j
+
+            # Normalize special cases
             if condition_str == "True":
-                condition_str = "0 == 0"  # Always true
-            if condition_str == "False":
-                condition_str = "0 != 0"  # Always false
-            if condition_str == "Maybe":
-                condition_str =  f"0 !={random.randint(0,1)}"  # Randomly true or false
+                condition_str = "0 == 0"
+            elif condition_str == "False":
+                condition_str = "0 != 0"
+            elif condition_str == "Maybe":
+                condition_str = f"0 != {random.randint(0, 1)}"
             body_lines, new_i = extract_block(lines, i, block_start="{", block_end="}")
             i = new_i
             def body():
@@ -51,25 +60,49 @@ def parse_lines(lines, compiler):
 
         # If conditional (with optional else)
         elif line.startswith("if"):
-            m = re.match(r"if\s+(.+)\s*\{", line)
+            m = re.match(r"if\s*\(?(.+?)\)?\s*(\{)?$", line)
             if not m:
                 raise SyntaxError(f"Unsupported if syntax: {line}")
             condition_str = m.group(1).strip()
+            if condition_str.startswith("(") and condition_str.endswith(")"):
+                condition_str = condition_str[1:-1].strip()
+
+            if not m.group(2):  # No '{' on same line
+                j = i + 1
+                while j < len(lines) and not lines[j].strip():
+                    j += 1
+                if j >= len(lines) or lines[j].strip() != "{":
+                    raise SyntaxError(f"Expected '{{' after if condition on line {i + 1}")
+                i = j
             if condition_str == "True":
-                condition_str = "0 == 0"  # Always true
-            if condition_str == "False":
-                condition_str = "0 != 0"  # Always false
-            if condition_str == "Maybe":
-                condition_str =  f"0 !={random.randint(0,1)}"  # Randomly true or false
+                condition_str = "0 == 0"
+            elif condition_str == "False":
+                condition_str = "0 != 0"
+            elif condition_str == "Maybe":
+                condition_str = f"0 != {random.randint(0, 1)}"
+
             body_lines, new_i = extract_block(lines, i, block_start="{", block_end="}")
             i = new_i
-            # Check for else block
+
+            # Check for optional else block
             has_else = False
             else_body_lines = []
             if i < len(lines):
                 next_line = lines[i].strip()
                 if next_line.startswith("else"):
                     has_else = True
+                    m_else = re.match(r"else\s*(\{)?$", next_line)
+                    if not m_else:
+                        raise SyntaxError(f"Unsupported else syntax: {next_line}")
+                    if not m_else.group(1):  # No '{' after else
+                        j = i + 1
+                        while j < len(lines) and not lines[j].strip():
+                            j += 1
+                        if j >= len(lines) or lines[j].strip() != "{":
+                            raise SyntaxError(f"Expected '{{' after else on line {i + 1}")
+                        i = j
+                    else:
+                        i = i  # '{' already present on same line
                     else_body_lines, new_i = extract_block(lines, i, block_start="{", block_end="}")
                     i = new_i
             def body():
@@ -83,13 +116,21 @@ def parse_lines(lines, compiler):
 
         # For loop
         elif line.startswith("for"):
-            # Syntax: for (init; condition; increment) {
-            m = re.match(r"for\s*\(([^;]+);([^;]+);([^)]+)\)\s*\{", line)
+            m = re.match(r"for\s*\(([^;]+);([^;]+);([^)]+)\)\s*(\{)?$", line)
             if not m:
                 raise SyntaxError(f"Unsupported for-loop syntax: {line}")
             init_str = m.group(1).strip()
             condition_str = m.group(2).strip()
             increment_str = m.group(3).strip()
+
+            if not m.group(4):  # No '{' on same line
+                j = i + 1
+                while j < len(lines) and not lines[j].strip():
+                    j += 1
+                if j >= len(lines) or lines[j].strip() != "{":
+                    raise SyntaxError(f"Expected '{{' after for loop header on line {i + 1}")
+                i = j
+
             body_lines, new_i = extract_block(lines, i, block_start="{", block_end="}")
             i = new_i
             def body():
@@ -121,7 +162,7 @@ def parse_assignment(var, expr, compiler):
         # Tokenize the expression
     tokens = re.findall(r"\d+|\w+|[\+\-\*/\(\)]", expr)
     # Shunting Yard algorithm for precedence
-    precedence = {'+': 1, '-': 1, '%': 1, '*': 2, '/': 2}
+    precedence = {'+': 1, '-': 1, '%': 1, '*': 2, '/': 2, '**':3}
     output = []
     ops = []
     for token in tokens:

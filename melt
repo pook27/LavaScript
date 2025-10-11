@@ -12,5 +12,5 @@ with open(input_file) as f:
         raise ValueError("Input file is not a .ls file")
 
 if __name__ =="__main__":
-    cpu = CPU(parse(source,debug=False))
+    cpu = CPU(parse(source,debug=True))
     cpu.run(diagnostics=False)

@@ -197,7 +197,6 @@ class Compiler:
         return jump_map[op]
 
     def compile_for(self, init_str, condition_str, increment_str, func):
-        print(f"[DEBUG] compile_for: init='{init_str}', condition='{condition_str}', increment='{increment_str}'")
         # Parse and emit initialization, Example: i = 0
         m_init = re.match(r"(\w+)\s*=\s*(.+)", init_str)
         if m_init:
@@ -212,7 +211,6 @@ class Compiler:
             raise SyntaxError(f"Unsupported for-loop init: {init_str}")
         start_label = f"FOR_START{next(self.label_count)}"
         end_label = f"FOR_END{next(self.label_count)}"
-        print(f"[DEBUG] for-loop labels: start_label={start_label}, end_label={end_label}")
         self.write(f"({start_label})")
 
         # Condition
@@ -257,7 +255,6 @@ class Compiler:
 
     def compile_if(self, condition_str, func):
         end_label = f"IF_END{next(self.label_count)}"
-        print(f"[DEBUG] compile_if: condition='{condition_str}', end_label={end_label}")
         or_parts = [part.strip() for part in condition_str.split("or")]
         for or_part in or_parts:
             and_parts = [p.strip() for p in or_part.split("and")]
@@ -270,7 +267,6 @@ class Compiler:
                 right = int(right) if right.isdigit() else right
                 jump_instr = self.compile_condition(left, op, right)
 
-                print(f"[DEBUG] if-condition: left={left}, op={op}, right={right}, jump_instr={jump_instr}")
                 self.write(f"@{end_label}")
                 self.write(f"D;{jump_instr}")
         func()

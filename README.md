@@ -53,14 +53,14 @@ Clone the repository, then run:
 ```bash
 ./melt examples/example.ls
 to compile and execute a LavaScript program.
+```
+## Development
+- Add new syntax → parser.py
+- Implement new operations → compiler.py
+- Update opcode translation → assembler.py
+- Extend CPU behavior → cpu.py
 
-Development
-Add new syntax → parser.py
-Implement new operations → compiler.py
-Update opcode translation → assembler.py
-Extend CPU behavior → cpu.py
-
-Roadmap
+## Roadmap
 <p>Functions and subroutines</p> <p>Strings and arrays</p> <p>Additional operators (like % and logical not)</p> <p>File I/O</p>
 License
 This project is just for learning and fun. Do whatever you want.
